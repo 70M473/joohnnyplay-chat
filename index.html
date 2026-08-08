@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Joohnnyplay - Chat</title>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <style>
+        /* ============================================
+           TODOS OS ESTILOS (MANTIDOS)
+           ============================================ */
+        :root {
+            --bg-body: #0e0e10;
+            --bg-container: #1a1a1d;
+            --bg-card: #25252b;
+            --bg-input: #2b2b31;
+            --bg-msg: #25252b;
+            --bg-msg-admin: #4a1f7a;
+            --bg-msg-privado: #1f3a5f;
+            --text-primary: #efeff1;
+            --text-secondary: #adadb8;
+            --text-muted: #666;
+            --border-color: #2a2a2e;
+            --shadow-color: rgba(0,0,0,0.8);
+            --btn-primary: #9147ff;
+            --btn-primary-hover: #772ce8;
+            --btn-danger: #eb0400;
+            --btn-danger-hover: #cc0000;
+            --badge-admin: #9147ff;
+            --link-hover: #9147ff;
+        }
+
+        body.tema-claro {
+            --bg-body: #f0f0f0;
+            --bg-container: #ffffff;
+            --bg-card: #e8e8e8;
+            --bg-input: #f0f0f0;
+            --bg-msg: #e8e8e8;
+            --bg-msg-admin: #d4bfff;
+            --bg-msg-privado: #cce5ff;
+            --text-primary: #1a1a1d;
+            --text-secondary: #555;
+            --text-muted: #888;
+            --border-color: #d0d0d0;
+            --shadow-color: rgba(0,0,0,0.15);
+            --btn-primary: #7b3fcf;
+            --btn-primary-hover: #6a2fb8;
+            --btn-danger: #cc0000;
+            --btn-danger-hover: #aa0000;
+            --badge-admin: #7b3fcf;
+            --link-hover: #7b3fcf;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body {
+            background: var(--bg-body);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 520px;
+            width: 100%;
+            background: var(--bg-container);
+            border-radius: 32px;
+            padding: 24px 20px 30px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 40px var(--shadow-color);
+            transition: background 0.3s, border 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .header .tema-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header .tema-toggle:hover {
+            transform: scale(1.1);
+            border-color: var(--btn-primary);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--btn-primary), var(--btn-primary-hover));
+            padding: 3px;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        .avatar-sem-foto {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: var(--btn-primary);
+            border: 3px solid var(--bg-container);
+            transition: background 0.3s, color 0.3s;
+        }
+        .header h1 {
+            color: var(--text-primary);
+            font-size: 22px;
+            transition: color 0.3s;
+        }
+        .header .sub {
+            color: var(--text-secondary);
+            font-size: 13px;
+            transition: color 0.3s;
+        }
+        #statusLive {
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 4px 18px;
+            border-radius: 30px;
+            margin-top: 6px;
+            letter-spacing: 1px;
+            transition: 0.3s;
+        }
+        .status-on { background: var(--btn-danger); color: #fff; box-shadow: 0 0 20px rgba(235,4,0,0.5); animation: piscar 1.5s infinite; }
+        .status-off { background: var(--bg-card); color: var(--text-muted); box-shadow: none; animation: none; }
+        @keyframes piscar { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .canais {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin: 16px 0 18px;
+            padding: 10px 0;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.3s;
+        }
+        .btn-canal {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 6px 14px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+        .btn-canal:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+            border-color: var(--link-hover);
+        }
+        .btn-canal img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+        .btn-canal:hover img {
+            filter: drop-shadow(0 0 6px currentColor);
+        }
+        .btn-yt:hover { background: #cc0000; color: #fff; }
+        .btn-yt:hover img { filter: drop-shadow(0 0 8px #ff3333); }
+        .btn-twitch:hover { background: #9147ff; color: #fff; }
+        .btn-twitch:hover img { filter: drop-shadow(0 0 8px #a970ff); }
+        .btn-kick:hover { background: #53fc18; color: #0e0e10; }
+        .btn-kick:hover img { filter: drop-shadow(0 0 8px #7aff4d); }
+        .btn-tt:hover { background: #000; color: #fff; border-color: #fff; }
+        .btn-tt:hover img { filter: drop-shadow(0 0 8px #fff); }
+        .btn-ig:hover, .btn-ig3d:hover { background: #d62976; color: #fff; }
+        .btn-ig:hover img, .btn-ig3d:hover img { filter: drop-shadow(0 0 8px #ff4d94); }
+        .btn-discord:hover { background: #5865f2; color: #fff; }
+        .btn-discord:hover img { filter: drop-shadow(0 0 8px #7a85f5); }
+
+        /* ============================================
+           ÁREA DE LOGIN (GOOGLE + ADMIN OCULTO)
+           ============================================ */
+        #loginArea {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        #loginArea .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .btn-login {
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            background: var(--btn-primary);
+            color: #fff;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+        }
+        .btn-login:hover { filter: brightness(1.2); }
+        .btn-google {
+            background: #fff;
+            color: #1a1a1d;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-google:hover { background: #f0f0f0; }
+        .btn-google img {
+            width: 20px;
+            height: 20px;
+        }
+        .login-error {
+            color: var(--btn-danger);
+            font-size: 13px;
+            text-align: center;
+            margin-top: 5px;
+            display: none;
+            background: rgba(235,4,0,0.1);
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .login-toggle {
+            color: var(--btn-primary);
+            cursor: pointer;
+            text-align: center;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        .login-toggle:hover { text-decoration: underline; }
+
+        /* Admin login (escondido) */
+        #adminLoginArea {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+        }
+        #adminLoginArea input {
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 15px;
+            outline: none;
+            transition: background 0.3s, color 0.3s;
+            width: 100%;
+        }
+
+        /* ============================================
+           CHAT (MANTIDO)
+           ============================================ */
+        #chatPanel { display: none; }
+        .tabs { display: flex; gap: 8px; margin: 0 0 12px 0; }
+        .tabs button { flex: 1; padding: 8px; border: none; border-radius: 12px; background: var(--bg-card); color: var(--text-muted); font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s; }
+        .tabs button.ativo { background: var(--btn-primary); color: #fff; }
+
+        #chatBox { background: var(--bg-container); border-radius: 16px; padding: 12px; height: 240px; overflow-y: auto; margin-bottom: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; transition: background 0.3s, border 0.3s; }
+        .msg {
+            background: var(--bg-msg);
+            padding: 6px 14px;
+            border-radius: 14px;
+            color: var(--text-primary);
+            max-width: 88%;
+            word-wrap: break-word;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .msg.admin { background: var(--bg-msg-admin); align-self: flex-end; border: 1px solid var(--btn-primary); }
+        .msg.privado { background: var(--bg-msg-privado); border-left: 3px solid #00b4d8; }
+        .msg .conteudo { flex: 1; }
+        .msg strong { color: var(--btn-primary); }
+        .msg small { color: var(--text-muted); font-size: 10px; margin-left: 8px; }
+
+        .msg-acoes { display: flex; gap: 4px; align-items: center; }
+        .msg-acoes button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; transition: 0.2s; }
+        .msg-acoes button:hover { background: var(--bg-card); color: var(--text-primary); }
+        .msg-acoes .btn-banir:hover { color: var(--btn-danger); }
+        .msg-acoes .btn-excluir:hover { color: var(--btn-danger); }
+
+        #chatInputArea {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        #chatInputArea input {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 30px;
+            border: none;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            outline: none;
+            font-size: 14px;
+            transition: background 0.3s, color 0.3s;
+        }
+        #chatInputArea button {
+            padding: 10px 18px;
+            border-radius: 30px;
+            border: none;
+            background: var(--btn-primary);
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #chatInputArea button:hover { filter: brightness(1.2); }
+        #charCounter {
+            color: var(--text-muted);
+            font-size: 12px;
+            min-width: 40px;
+            text-align: right;
+            transition: color 0.3s;
+        }
+        #charCounter.limite { color: var(--btn-danger); font-weight: bold; }
+
+        .botoes-live {
+            display: none;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .botoes-live.mostrar { display: flex; }
+        .btn-live {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 30px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-iniciar { background: var(--btn-danger); animation: piscar 1.5s infinite; box-shadow: 0 0 20px rgba(235,4,0,0.4); }
+        .btn-iniciar:hover { filter: brightness(1.2); }
+        .btn-encerrar { background: var(--bg-card); color: var(--text-muted); }
+        .btn-encerrar:hover { background: var(--text-muted); color: #fff; }
+
+        .user-info {
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .user-info .logout-btn { color: var(--btn-danger); cursor: pointer; text-decoration: underline; }
+        .user-info .logout-btn:hover { color: var(--btn-danger-hover); }
+        .user-info .admin-badge { background: var(--badge-admin); color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 11px; }
+        .user-info .btn-admin {
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: none;
+            padding: 2px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+        .user-info .btn-admin:hover { background: var(--border-color); color: var(--text-primary); }
+        .user-info .btn-danger-admin {
+            background: var(--btn-danger);
+            color: #fff;
+            border: none;
+            padding: 2px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+        .user-info .btn-danger-admin:hover { filter: brightness(1.2); }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .modal-overlay.ativo { display: flex; }
+        .modal {
+            background: var(--bg-container);
+            border-radius: 24px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            transition: background 0.3s, border 0.3s;
+        }
+        .modal h2 { color: var(--text-primary); margin-bottom: 16px; text-align: center; }
+        .modal .close-btn {
+            background: var(--bg-card);
+            color: var(--text-muted);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            float: right;
+        }
+        .modal .close-btn:hover { background: var(--border-color); }
+        .modal .banido-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+        .modal .banido-item .desbanir-btn {
+            background: var(--btn-danger);
+            color: #fff;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .modal .banido-item .desbanir-btn:hover { filter: brightness(1.2); }
+        .modal .empty-msg { color: var(--text-muted); text-align: center; padding: 20px; }
+
+        footer {
+            margin-top: 16px;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 14px;
+            transition: color 0.3s, border-color 0.3s;
+        }
+        footer span { color: var(--btn-primary); }
+
+        .erro-mobile {
+            display: none;
+            background: var(--btn-danger);
+            color: #fff;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .erro-mobile.visivel { display: block; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- CABEÇALHO -->
+    <div class="header">
+        <button class="tema-toggle" id="temaToggle" aria-label="Alternar tema">🌙</button>
+        <div class="avatar">
+            <div class="avatar-sem-foto" id="avatarIcon">🎮</div>
+        </div>
+        <h1>@joohnnyplay</h1>
+        <div class="sub">🎯 Live, games & resenha todo dia!</div>
+        <div id="statusLive" class="status-off">⚫ OFFLINE</div>
+    </div>
+
+    <div id="erroMobile" class="erro-mobile"></div>
+
+    <!-- CANAIS -->
+    <div class="canais">
+        <a href="https://youtube.com/@joohnnyplay?sub_confirmation=1" target="_blank" class="btn-canal btn-yt">
+            <img src="img/youtube.png" alt="YouTube" /> YouTube
+        </a>
+        <a href="https://twitch.tv/joohnnyplay" target="_blank" class="btn-canal btn-twitch">
+            <img src="img/twitch.png" alt="Twitch" /> Twitch
+        </a>
+        <a href="https://kick.com/joohnnyplay" target="_blank" class="btn-canal btn-kick">
+            <img src="img/kick.png" alt="Kick" /> Kick
+        </a>
+        <a href="https://www.tiktok.com/@joohnnyplay2" target="_blank" class="btn-canal btn-tt">
+            <img src="img/tiktok.png" alt="TikTok" /> TikTok
+        </a>
+        <a href="https://instagram.com/joohnnyplay" target="_blank" class="btn-canal btn-ig">
+            <img src="img/instagram.png" alt="Instagram" /> @joohnnyplay
+        </a>
+        <a href="https://instagram.com/johnnyprint3d" target="_blank" class="btn-canal btn-ig3d">
+            <img src="img/instagram3d.png" alt="3D Prints" /> 3D Prints
+        </a>
+        <a href="https://discord.gg/dpUazttFdu" target="_blank" class="btn-canal btn-discord">
+            <img src="img/discord.png" alt="Discord" /> Discord
+        </a>
+    </div>
+
+    <!-- ============================================
+    ÁREA DE LOGIN (GOOGLE + ADMIN OCULTO)
+    ============================================ -->
+    <div id="loginArea">
+        <!-- Entrada única para usuários comuns: Google -->
+        <div class="form-group">
+            <button class="btn-login btn-google" id="btnGoogleComum">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+                Entrar com Google
+            </button>
+            <div id="loginErrorComum" class="login-error"></div>
+        </div>
+
+        <!-- Botão para mostrar login de admin -->
+        <div class="login-toggle" id="toggleAdminBtn">🔐 Sou administrador</div>
+
+        <!-- Área de login do admin (apenas e-mail/senha) -->
+        <div id="adminLoginArea">
+            <input type="email" id="emailInput" placeholder="E-mail do admin" />
+            <input type="password" id="senhaInput" placeholder="Senha" />
+            <button class="btn-login" id="entrarAdminBtn">👑 Entrar como Admin</button>
+            <div id="loginErrorAdmin" class="login-error"></div>
+        </div>
+    </div>
+
+    <!-- ============================================
+    CHAT
+    ============================================ -->
+    <div id="chatPanel">
+        <div class="user-info" id="userInfo">
+            <span>👤 <span id="userDisplayName">Usuário</span></span>
+            <span class="admin-badge" id="adminBadge" style="display:none;">👑 ADMIN</span>
+            <button class="btn-admin" id="btnGerenciarBan" style="display:none;">🚫 Banidos</button>
+            <button class="btn-admin" id="btnExportar" style="display:none;">📥 Exportar</button>
+            <button class="btn-danger-admin" id="btnLimparTudo" style="display:none;">🧹 Limpar Tudo</button>
+            <span class="logout-btn" id="logoutBtn">Sair</span>
+        </div>
+        <div class="tabs">
+            <button id="tabGeral" class="ativo">📢 Geral</button>
+            <button id="tabPrivado">🔒 Privado (Admin)</button>
+        </div>
+        <div id="chatBox"><p style="color:var(--text-muted); text-align:center; width:100%;">Entre no chat para ver as mensagens.</p></div>
+        <div id="chatInputArea">
+            <input type="text" id="msgInput" placeholder="Digite sua mensagem..." maxlength="500" />
+            <span id="charCounter">0/500</span>
+            <button id="enviarBtn">Enviar</button>
+        </div>
+
+        <div class="botoes-live" id="botoesLive">
+            <button class="btn-live btn-iniciar" id="btnIniciarLive">🔴 INICIAR LIVE</button>
+            <button class="btn-live btn-encerrar" id="btnEncerrarLive">⏹️ ENCERRAR LIVE</button>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modalBan">
+        <div class="modal">
+            <button class="close-btn" id="fecharModalBan">✕ Fechar</button>
+            <h2>🚫 Usuários Banidos</h2>
+            <div id="listaBanidos">
+                <div class="empty-msg">Nenhum usuário banido.</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>Feito com <span>❤️</span> para a comunidade do Joohnnyplay</footer>
+</div>
+
+<script>
+    // ================================================================
+    // VERIFICAÇÃO DE AMBIENTE (file://)
+    // ================================================================
+    (function() {
+        if (window.location.protocol === 'file:') {
+            var erroDiv = document.getElementById('erroMobile');
+            if (erroDiv) {
+                erroDiv.innerHTML = '⚠️ <strong>Ambiente não suportado:</strong> O Firebase Auth <strong>não funciona</strong> com <code>file://</code>. Use um servidor local (ex: Live Server) ou publique em um servidor HTTP.';
+                erroDiv.classList.add('visivel');
+            }
+            setTimeout(function() {
+                alert('⚠️ ATENÇÃO: Você está testando localmente (file://). O login NÃO funcionará. Use o Live Server (http://localhost) para testar.');
+            }, 500);
+        }
+    })();
+
+    // ================================================================
+    // LISTA DE NOMES BLOQUEADOS PARA USUÁRIOS COMUNS
+    // ================================================================
+    const NOMES_BLOQUEADOS = [
+        'joohnny',
+        'johnny',
+        'joohnnyplay',
+        'johnnyplay',
+        'johnny.play',
+        'joohny.play'
+    ];
+
+    function nomeBloqueado(nome) {
+        return NOMES_BLOQUEADOS.includes(nome.toLowerCase().trim());
+    }
+
+    // ================================================================
+    // FIREBASE CONFIG
+    // ================================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyAg8nF30svbkszqoey9fnJvLYx3yEpAYqY",
+        authDomain: "joohnnyplay-chat.firebaseapp.com",
+        databaseURL: "https://joohnnyplay-chat-default-rtdb.firebaseio.com",
+        projectId: "joohnnyplay-chat",
+        storageBucket: "joohnnyplay-chat.firebasestorage.app",
+        messagingSenderId: "960134774474",
+        appId: "1:960134774474:web:1c3529368c83cf09bafe33"
+    };
+
+    let db = null;
+    let auth = null;
+    let googleProvider = null;
+    let firebaseDisponivel = false;
+
+    try {
+        if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            auth = firebase.auth();
+            googleProvider = new firebase.auth.GoogleAuthProvider();
+            firebaseDisponivel = true;
+            console.log('🔥 Firebase inicializado com sucesso.');
+        } else {
+            throw new Error('Firebase não carregou.');
+        }
+    } catch (e) {
+        console.error('Erro ao inicializar Firebase:', e);
+        firebaseDisponivel = false;
+        var erroDiv = document.getElementById('erroMobile');
+        if (erroDiv) {
+            erroDiv.textContent = '❌ Erro ao carregar Firebase: ' + e.message;
+            erroDiv.classList.add('visivel');
+        }
+    }
+
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1535339759667253298/bZ6i4Vs1UkdK0IiRQWVJCviGTmi1Uw-zPvM40iwhhzqua4EdoGT6zKU2ijRUorZzjAqK";
+    const LIMITE_CARACTERES = 500;
+
+    // ================================================================
+    // TEMA
+    // ================================================================
+    function toggleTema() {
+        const body = document.body;
+        const btn = document.getElementById('temaToggle');
+        if (body.classList.contains('tema-claro')) {
+            body.classList.remove('tema-claro');
+            btn.textContent = '🌙';
+            try { localStorage.setItem('tema', 'escuro'); } catch(e) {}
+        } else {
+            body.classList.add('tema-claro');
+            btn.textContent = '☀️';
+            try { localStorage.setItem('tema', 'claro'); } catch(e) {}
+        }
+    }
+    function carregarTema() {
+        try {
+            const tema = localStorage.getItem('tema');
+            if (tema === 'claro') {
+                document.body.classList.add('tema-claro');
+                document.getElementById('temaToggle').textContent = '☀️';
+            }
+        } catch(e) {}
+    }
+    document.getElementById('temaToggle').addEventListener('click', toggleTema);
+
+    // ================================================================
+    // VARIÁVEIS GLOBAIS
+    // ================================================================
+    let usuarioAtual = '';
+    let isAdmin = false;
+    let usuarioLogado = null;
+    let chatAtivo = 'geral';
+    let deviceId = 'web_' + Math.random().toString(36).substring(2, 10);
+    let adminsList = [];
+
+    // ================================================================
+    // ADMINS (CARREGADA DO FIREBASE)
+    // ================================================================
+    function carregarAdmins() {
+        if (!firebaseDisponivel || !db) return;
+        db.ref('admins').once('value', (snapshot) => {
+            const dados = snapshot.val();
+            if (dados) {
+                adminsList = Object.values(dados);
+            } else {
+                adminsList = ['o70m473o@gmail.com'];
+                db.ref('admins').set({ admin1: 'o70m473o@gmail.com' });
+            }
+        }).catch(err => console.error('Erro ao carregar admins:', err));
+    }
+    carregarAdmins();
+
+    function isAdminEmail(email) {
+        return adminsList.includes(email);
+    }
+
+    // ================================================================
+    // BANIMENTO
+    // ================================================================
+    function verificarBan(email, device) {
+        return new Promise((resolve) => {
+            if (!firebaseDisponivel || !db) { resolve(false); return; }
+            db.ref('banidos').once('value', (snapshot) => {
+                const dados = snapshot.val();
+                if (!dados) { resolve(false); return; }
+                let banido = false;
+                const agora = Date.now();
+                if (dados[email]) {
+                    const ban = dados[email];
+                    if (ban.expiraEm && ban.expiraEm > agora) banido = true;
+                    else if (ban.expiraEm && ban.expiraEm <= agora) db.ref('banidos/' + email).remove();
+                    else if (!ban.expiraEm) banido = true;
+                }
+                if (!banido && dados[device]) {
+                    const ban = dados[device];
+                    if (ban.expiraEm && ban.expiraEm > agora) banido = true;
+                    else if (ban.expiraEm && ban.expiraEm <= agora) db.ref('banidos/' + device).remove();
+                    else if (!ban.expiraEm) banido = true;
+                }
+                resolve(banido);
+            }).catch(() => resolve(false));
+        });
+    }
+
+    function banirUsuario(email, duracaoMinutos = 0) {
+        if (!isAdmin) return;
+        if (email === usuarioLogado?.email) { alert("⚠️ Você não pode banir a si mesmo!"); return; }
+        if (!firebaseDisponivel || !db) { alert('Firebase indisponível.'); return; }
+        let expiraEm = null;
+        let textoDuracao = 'permanente';
+        if (duracaoMinutos > 0) {
+            expiraEm = Date.now() + (duracaoMinutos * 60 * 1000);
+            textoDuracao = duracaoMinutos + ' minuto(s)';
+        }
+        const banData = { email: email, deviceId: deviceId, banidoEm: Date.now(), expiraEm: expiraEm };
+        const updates = {};
+        updates['banidos/' + email] = banData;
+        updates['banidos/' + deviceId] = banData;
+        db.ref().update(updates);
+        alert(`✅ Usuário "${email}" foi banido (${textoDuracao})!`);
+        if (email === usuarioLogado?.email) fazerLogout();
+    }
+
+    function desbanirUsuario(email) {
+        if (!isAdmin) return;
+        if (!firebaseDisponivel || !db) return;
+        db.ref('banidos/' + email).once('value', (snapshot) => {
+            const ban = snapshot.val();
+            if (ban && ban.deviceId) db.ref('banidos/' + ban.deviceId).remove();
+            db.ref('banidos/' + email).remove();
+            alert(`✅ Usuário "${email}" foi desbanido.`);
+            carregarListaBanidos();
+        });
+    }
+
+    function carregarListaBanidos() {
+        if (!firebaseDisponivel || !db) return;
+        db.ref('banidos').once('value', (snapshot) => {
+            const dados = snapshot.val();
+            const container = document.getElementById('listaBanidos');
+            container.innerHTML = '';
+            if (!dados) { container.innerHTML = '<div class="empty-msg">Nenhum usuário banido.</div>'; return; }
+            const agora = Date.now();
+            let encontrou = false;
+            for (let key in dados) {
+                if (key.startsWith('dev_')) continue;
+                const ban = dados[key];
+                if (ban.expiraEm && ban.expiraEm <= agora) { db.ref('banidos/' + key).remove(); continue; }
+                encontrou = true;
+                const div = document.createElement('div');
+                div.className = 'banido-item';
+                const expiraTexto = ban.expiraEm ? new Date(ban.expiraEm).toLocaleString() : 'Permanente';
+                div.innerHTML = `
+                    <span><strong>${key}</strong> <small style="color:var(--text-muted);">(expira: ${expiraTexto})</small></span>
+                    <button class="desbanir-btn" data-email="${key}">Desbanir</button>
+                `;
+                container.appendChild(div);
+            }
+            if (!encontrou) { container.innerHTML = '<div class="empty-msg">Nenhum usuário banido.</div>'; }
+            document.querySelectorAll('.desbanir-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const email = e.target.getAttribute('data-email');
+                    desbanirUsuario(email);
+                });
+            });
+        });
+    }
+
+    // ================================================================
+    // EXPORTAR CONVERSA
+    // ================================================================
+    function corPorUsuario(nome) {
+        let hash = 0;
+        for (let i = 0; i < nome.length; i++) {
+            hash = nome.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 70%, 60%)`;
+    }
+
+    function exportarConversa() {
+        if (!isAdmin) return;
+        if (!firebaseDisponivel || !db) { alert('Firebase indisponível.'); return; }
+        db.ref('mensagens').once('value', (snapshot) => {
+            const dados = snapshot.val();
+            if (!dados) { alert("ℹ️ Não há mensagens para exportar."); return; }
+            const msgs = Object.values(dados).sort((a, b) => a.timestamp - b.timestamp);
+            const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            let html = `
+            <!DOCTYPE html>
+            <html><head><meta charset="UTF-8"><title>Exportação - Joohnnyplay Chat</title>
+            <style>
+                * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+                body { background:#0e0e10; color:#efeff1; padding:20px; }
+                .container { max-width:800px; margin:0 auto; }
+                h1 { color:#9147ff; border-bottom:2px solid #2a2a2e; padding-bottom:10px; }
+                .info { color:#adadb8; margin:10px 0 20px; font-size:14px; }
+                .msg { padding:8px 14px; margin:6px 0; border-radius:8px; background:#1a1a1d; border-left:4px solid #9147ff; display:flex; align-items:center; gap:10px; }
+                .msg .horario { color:#666; font-size:12px; min-width:70px; }
+                .msg .nome { font-weight:bold; min-width:120px; }
+                .msg .texto { flex:1; word-wrap:break-word; }
+                .msg.admin { border-left-color:#eb0400; background:#2a1a2a; }
+                .msg.privado { border-left-color:#00b4d8; background:#1a2a3a; }
+                .badge { font-size:12px; background:#2a2a2e; padding:2px 8px; border-radius:12px; color:#888; }
+            </style>
+            </head>
+            <body><div class="container">
+                <h1>📋 Joohnnyplay - Chat</h1>
+                <div class="info">📅 Exportado em: ${agora} • Total de mensagens: ${msgs.length}</div>
+            `;
+            msgs.forEach(msg => {
+                const cor = corPorUsuario(msg.remetente);
+                const isAdmin = (msg.remetente === 'admin' || msg.remetente === 'joohnnyplay');
+                const ehPrivado = (msg.tipo === 'privado');
+                const horario = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+                const classe = (isAdmin ? 'admin' : '') + (ehPrivado ? ' privado' : '');
+                const badge = isAdmin ? '<span class="badge">👑 Admin</span>' : '';
+                const privBadge = ehPrivado ? '<span class="badge">🔒 Privado</span>' : '';
+                html += `
+                <div class="msg ${classe}">
+                    <span class="horario">${horario}</span>
+                    <span class="nome" style="color:${cor}">${msg.remetente}</span>
+                    <span class="texto">${msg.texto}</span>
+                    ${badge} ${privBadge}
+                </div>`;
+            });
+            html += `</div></body></html>`;
+            const blob = new Blob([html], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `chat_joohnnyplay_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        });
+    }
+
+    // ================================================================
+    // LIMPAR TUDO
+    // ================================================================
+    function limparTudo() {
+        if (!isAdmin) return;
+        if (!firebaseDisponivel || !db) { alert('Firebase indisponível.'); return; }
+        if (!confirm("⚠️ Tem certeza que deseja APAGAR TODAS as mensagens do chat?")) return;
+        if (!confirm("🔄 Última chance! Todas as mensagens serão removidas permanentemente. Confirmar?")) return;
+        db.ref('mensagens').remove()
+            .then(() => alert("✅ Chat limpo com sucesso!"))
+            .catch(err => alert("❌ Erro ao limpar: " + err.message));
+    }
+
+    // ================================================================
+    // DEFINIR NICKNAME PARA USUÁRIO GOOGLE
+    // ================================================================
+    function definirNickname(user, callback) {
+        if (!firebaseDisponivel || !db) {
+            // Fallback: usa displayName ou parte do email
+            callback(user.displayName || user.email.split('@')[0]);
+            return;
+        }
+
+        db.ref('usuarios/' + user.uid + '/nickname').once('value', (snapshot) => {
+            if (snapshot.exists()) {
+                // Já tem nickname salvo
+                callback(snapshot.val());
+            } else {
+                // Sugere um nome
+                let sugestao = user.displayName || user.email.split('@')[0];
+                let nickname = prompt('Escolha seu nickname para o chat (nomes como "joohnny", "johnny" não estão disponíveis):', sugestao);
+                while (nickname && (nickname.trim() === '' || nomeBloqueado(nickname.trim()))) {
+                    alert('Nickname inválido ou bloqueado. Tente outro.');
+                    nickname = prompt('Escolha seu nickname para o chat:', sugestao);
+                }
+                if (nickname) {
+                    nickname = nickname.trim();
+                    // Salva no Firebase
+                    db.ref('usuarios/' + user.uid).set({ nickname: nickname, email: user.email });
+                    callback(nickname);
+                } else {
+                    // Se cancelou, usa sugestão
+                    callback(sugestao);
+                }
+            }
+        }).catch(() => {
+            // Em caso de erro, usa sugestão
+            callback(user.displayName || user.email.split('@')[0]);
+        });
+    }
+
+    // ================================================================
+    // AUTENTICAÇÃO COMUM (Google)
+    // ================================================================
+    function mostrarErroComum(msg) {
+        const el = document.getElementById('loginErrorComum');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+    function limparErroComum() {
+        document.getElementById('loginErrorComum').style.display = 'none';
+    }
+
+    function loginGoogleComum() {
+        if (!firebaseDisponivel || !auth || !googleProvider) {
+            mostrarErroComum('❌ Firebase não disponível.');
+            return;
+        }
+        limparErroComum();
+        auth.signInWithPopup(googleProvider)
+            .then((result) => {
+                const user = result.user;
+                // Verifica se é admin (pelo email)
+                if (isAdminEmail(user.email)) {
+                    usuarioLogado = user;
+                    entrarAdmin(user);
+                } else {
+                    // Usuário comum: verifica ban e define nickname
+                    verificarBan(user.email, deviceId).then((banido) => {
+                        if (banido) {
+                            alert('🚫 Você está banido.');
+                            auth.signOut();
+                            return;
+                        }
+                        // Define nickname
+                        definirNickname(user, (nickname) => {
+                            usuarioAtual = nickname;
+                            isAdmin = false;
+                            usuarioLogado = user;
+                            entrarNoChat(usuarioAtual, false);
+                        });
+                    });
+                }
+            })
+            .catch((err) => {
+                mostrarErroComum('❌ ' + err.message);
+            });
+    }
+
+    // ================================================================
+    // AUTENTICAÇÃO ADMIN (E-mail/Senha)
+    // ================================================================
+    function mostrarErroAdmin(msg) {
+        const el = document.getElementById('loginErrorAdmin');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+    function limparErroAdmin() {
+        document.getElementById('loginErrorAdmin').style.display = 'none';
+    }
+
+    function fazerLoginAdmin(email, senha) {
+        if (!firebaseDisponivel || !auth) {
+            mostrarErroAdmin('❌ Firebase não disponível.');
+            return;
+        }
+        limparErroAdmin();
+        auth.signInWithEmailAndPassword(email, senha)
+            .then((userCred) => {
+                const user = userCred.user;
+                if (isAdminEmail(user.email)) {
+                    usuarioLogado = user;
+                    entrarAdmin(user);
+                } else {
+                    mostrarErroAdmin('❌ Este e-mail não é um administrador.');
+                    auth.signOut();
+                }
+            })
+            .catch((err) => {
+                mostrarErroAdmin('❌ ' + err.message);
+            });
+    }
+
+    // ================================================================
+    // ENTRAR ADMIN
+    // ================================================================
+    function entrarAdmin(user) {
+        const email = user.email;
+        const nome = user.displayName || email.split('@')[0];
+
+        verificarBan(email, deviceId).then((banido) => {
+            if (banido) {
+                alert('🚫 Você está banido do chat.');
+                auth.signOut();
+                return;
+            }
+            isAdmin = true;
+            usuarioAtual = nome;
+            usuarioLogado = user;
+            entrarNoChat(usuarioAtual, true);
+        });
+    }
+
+    // ================================================================
+    // ENTRAR NO CHAT (GERAL)
+    // ================================================================
+    function entrarNoChat(identificador, admin) {
+        document.getElementById('loginArea').style.display = 'none';
+        document.getElementById('chatPanel').style.display = 'block';
+        document.getElementById('userDisplayName').textContent = identificador + (admin ? ' 👑' : '');
+
+        if (admin) {
+            document.getElementById('adminBadge').style.display = 'inline';
+            document.getElementById('botoesLive').classList.add('mostrar');
+            document.getElementById('btnGerenciarBan').style.display = 'inline';
+            document.getElementById('btnExportar').style.display = 'inline';
+            document.getElementById('btnLimparTudo').style.display = 'inline';
+            document.querySelector('.sub').innerHTML = '👑 **ADMIN** - Você controla a live!';
+        } else {
+            document.getElementById('adminBadge').style.display = 'none';
+            document.getElementById('botoesLive').classList.remove('mostrar');
+            document.getElementById('btnGerenciarBan').style.display = 'none';
+            document.getElementById('btnExportar').style.display = 'none';
+            document.getElementById('btnLimparTudo').style.display = 'none';
+            document.querySelector('.sub').innerHTML = '🎯 Live, games & resenha todo dia!';
+        }
+
+        escutarStatus();
+        carregarMensagens();
+    }
+
+    // ================================================================
+    // STATUS LIVE
+    // ================================================================
+    function atualizarStatus(estaAoVivo) {
+        const statusEl = document.getElementById('statusLive');
+        if (estaAoVivo) {
+            statusEl.textContent = '🔴 AO VIVO AGORA';
+            statusEl.className = 'status-on';
+        } else {
+            statusEl.textContent = '⚫ OFFLINE';
+            statusEl.className = 'status-off';
+        }
+    }
+    function escutarStatus() {
+        if (!firebaseDisponivel || !db) return;
+        const ref = db.ref('statusLive');
+        ref.off();
+        ref.on('value', (snapshot) => {
+            atualizarStatus(snapshot.val() === true);
+        }, (err) => console.error('Erro ao escutar status:', err));
+    }
+    function setarStatus(aoVivo) {
+        if (!isAdmin) return;
+        if (!firebaseDisponivel || !db) { alert('Firebase indisponível.'); return; }
+        db.ref('statusLive').set(aoVivo);
+        if (aoVivo) notificarLive();
+    }
+    function notificarLive() {
+        const mensagem = {
+            content: '🚨 **@joohnnyplay ESTÁ AO VIVO!** 🚨\n👉 https://twitch.tv/joohnnyplay\n👉 https://kick.com/joohnnyplay'
+        };
+        fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mensagem)
+        }).catch(err => console.error('Erro ao notificar:', err));
+    }
+
+    // ================================================================
+    // CARREGAR MENSAGENS
+    // ================================================================
+    function carregarMensagens() {
+        if (!firebaseDisponivel || !db) {
+            document.getElementById('chatBox').innerHTML = '<p style="color:var(--text-muted); text-align:center; width:100%;">⚠️ Firebase offline – mensagens não disponíveis.</p>';
+            return;
+        }
+        const ref = db.ref('mensagens');
+        ref.off();
+        ref.on('value', (snapshot) => {
+            const dados = snapshot.val();
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = '';
+            if (!dados) {
+                chatBox.innerHTML = '<p style="color:var(--text-muted); text-align:center; width:100%;">Nenhuma mensagem ainda. Seja o primeiro!</p>';
+                return;
+            }
+            const msgs = Object.entries(dados).sort((a, b) => a[1].timestamp - b[1].timestamp);
+            const chatAtivo = document.querySelector('.tabs .ativo')?.id === 'tabPrivado' ? 'privado' : 'geral';
+            msgs.forEach(([id, msg]) => {
+                if (msg.tipo === 'privado') {
+                    const souAdmin = isAdmin;
+                    const souDestinatario = msg.para === usuarioAtual || msg.remetente === usuarioAtual;
+                    if (chatAtivo === 'privado') {
+                        if (!(souAdmin || souDestinatario)) return;
+                    } else {
+                        return;
+                    }
+                }
+                if (chatAtivo === 'geral' && msg.tipo !== 'geral') return;
+                if (chatAtivo === 'privado' && msg.tipo !== 'privado') return;
+
+                const div = document.createElement('div');
+                div.className = 'msg';
+                const ehAdmin = (msg.remetente === 'admin' || msg.remetente === 'joohnnyplay' || (isAdmin && msg.remetente === usuarioAtual));
+                if (ehAdmin) div.classList.add('admin');
+                if (msg.tipo === 'privado') div.classList.add('privado');
+
+                const horario = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const extra = msg.tipo === 'privado' ? ` (🔒 Para ${msg.para})` : '';
+                const conteudo = document.createElement('span');
+                conteudo.className = 'conteudo';
+                conteudo.innerHTML = `<strong>${ehAdmin ? '👑 ' : ''}${msg.remetente}</strong>${extra}: ${msg.texto} <small>${horario}</small>`;
+
+                const acoes = document.createElement('div');
+                acoes.className = 'msg-acoes';
+
+                if (isAdmin && msg.remetente !== usuarioAtual && msg.remetente !== 'admin') {
+                    const btnBanir = document.createElement('button');
+                    btnBanir.className = 'btn-banir';
+                    btnBanir.textContent = '🚫';
+                    btnBanir.title = 'Banir';
+                    btnBanir.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const duracao = prompt('⏱️ Duração (minutos, 0=permanente):');
+                        if (duracao === null) return;
+                        const minutos = parseInt(duracao);
+                        if (isNaN(minutos) || minutos < 0) { alert('Valor inválido!'); return; }
+                        banirUsuario(msg.remetente, minutos);
+                    });
+                    acoes.appendChild(btnBanir);
+                }
+
+                if (isAdmin) {
+                    const btnExcluir = document.createElement('button');
+                    btnExcluir.className = 'btn-excluir';
+                    btnExcluir.textContent = '🗑️';
+                    btnExcluir.title = 'Excluir';
+                    btnExcluir.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (confirm('🗑️ Excluir mensagem?')) {
+                            db.ref('mensagens/' + id).remove();
+                        }
+                    });
+                    acoes.appendChild(btnExcluir);
+                }
+
+                div.appendChild(conteudo);
+                if (acoes.children.length > 0) div.appendChild(acoes);
+                chatBox.appendChild(div);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }, (err) => {
+            console.error('Erro ao carregar mensagens:', err);
+        });
+    }
+
+    // ================================================================
+    // ENVIAR MENSAGEM
+    // ================================================================
+    function enviarMensagem() {
+        const input = document.getElementById('msgInput');
+        const texto = input.value.trim();
+        if (!texto) return;
+        if (texto.length > LIMITE_CARACTERES) {
+            alert(`⚠️ A mensagem excede o limite de ${LIMITE_CARACTERES} caracteres.`);
+            return;
+        }
+        if (!firebaseDisponivel || !db) {
+            alert('⚠️ Firebase offline – mensagem não enviada.');
+            return;
+        }
+        const id = isAdmin ? usuarioLogado?.email : usuarioAtual;
+        verificarBan(id, deviceId).then((banido) => {
+            if (banido) {
+                alert('🚫 Você está banido.');
+                input.value = '';
+                return;
+            }
+            const chatAtivo = document.querySelector('.tabs .ativo')?.id === 'tabPrivado' ? 'privado' : 'geral';
+            if (chatAtivo === 'privado' && !isAdmin) {
+                alert('⚠️ Você não tem permissão para enviar mensagens privadas.');
+                return;
+            }
+            let para = 'todos';
+            if (chatAtivo === 'privado') para = 'admin';
+            const msgObj = {
+                remetente: usuarioAtual,
+                texto: texto.substring(0, LIMITE_CARACTERES),
+                timestamp: Date.now(),
+                tipo: chatAtivo,
+                para: para
+            };
+            db.ref('mensagens').push(msgObj);
+            input.value = '';
+            atualizarContador();
+            input.focus();
+        }).catch(() => {});
+    }
+
+    // ================================================================
+    // CONTADOR
+    // ================================================================
+    function atualizarContador() {
+        const input = document.getElementById('msgInput');
+        const contador = document.getElementById('charCounter');
+        const length = input.value.length;
+        contador.textContent = `${length}/${LIMITE_CARACTERES}`;
+        if (length > LIMITE_CARACTERES) {
+            contador.classList.add('limite');
+        } else {
+            contador.classList.remove('limite');
+        }
+    }
+
+    // ================================================================
+    // LOGOUT
+    // ================================================================
+    function fazerLogout() {
+        if (isAdmin && auth) auth.signOut();
+        usuarioLogado = null;
+        isAdmin = false;
+        document.getElementById('chatPanel').style.display = 'none';
+        document.getElementById('loginArea').style.display = 'flex';
+        document.getElementById('adminLoginArea').style.display = 'none';
+        document.getElementById('toggleAdminBtn').textContent = '🔐 Sou administrador';
+        document.getElementById('emailInput').value = '';
+        document.getElementById('senhaInput').value = '';
+        document.querySelector('.sub').innerHTML = '🎯 Live, games & resenha todo dia!';
+        if (db) {
+            const ref = db.ref('mensagens');
+            ref.off();
+        }
+    }
+
+    // ================================================================
+    // EVENTOS DE UI
+    // ================================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle para mostrar área de admin
+        document.getElementById('toggleAdminBtn').addEventListener('click', function() {
+            const area = document.getElementById('adminLoginArea');
+            if (area.style.display === 'flex') {
+                area.style.display = 'none';
+                this.textContent = '🔐 Sou administrador';
+            } else {
+                area.style.display = 'flex';
+                this.textContent = '❌ Cancelar login de admin';
+                document.getElementById('loginErrorAdmin').style.display = 'none';
+            }
+        });
+
+        // Login com Google (comum)
+        document.getElementById('btnGoogleComum').addEventListener('click', loginGoogleComum);
+
+        // Login admin (e-mail/senha)
+        document.getElementById('entrarAdminBtn').addEventListener('click', function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const senha = document.getElementById('senhaInput').value.trim();
+            if (!email || !senha) {
+                mostrarErroAdmin('❌ Preencha e-mail e senha.');
+                return;
+            }
+            fazerLoginAdmin(email, senha);
+        });
+
+        // Enviar mensagem
+        document.getElementById('enviarBtn').addEventListener('click', enviarMensagem);
+        document.getElementById('msgInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') enviarMensagem();
+        });
+        document.getElementById('msgInput').addEventListener('input', atualizarContador);
+
+        // Tabs
+        document.getElementById('tabGeral').addEventListener('click', function() {
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('ativo'));
+            this.classList.add('ativo');
+            chatAtivo = 'geral';
+            carregarMensagens();
+        });
+        document.getElementById('tabPrivado').addEventListener('click', function() {
+            if (!isAdmin) {
+                alert('⚠️ Apenas administradores podem acessar o chat privado.');
+                return;
+            }
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('ativo'));
+            this.classList.add('ativo');
+            chatAtivo = 'privado';
+            carregarMensagens();
+        });
+
+        // Live
+        document.getElementById('btnIniciarLive').addEventListener('click', () => setarStatus(true));
+        document.getElementById('btnEncerrarLive').addEventListener('click', () => setarStatus(false));
+
+        // Banidos
+        document.getElementById('btnGerenciarBan').addEventListener('click', () => {
+            document.getElementById('modalBan').classList.add('ativo');
+            carregarListaBanidos();
+        });
+        document.getElementById('fecharModalBan').addEventListener('click', () => {
+            document.getElementById('modalBan').classList.remove('ativo');
+        });
+        document.getElementById('modalBan').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                document.getElementById('modalBan').classList.remove('ativo');
+            }
+        });
+
+        // Exportar e Limpar
+        document.getElementById('btnExportar').addEventListener('click', exportarConversa);
+        document.getElementById('btnLimparTudo').addEventListener('click', limparTudo);
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', fazerLogout);
+    });
+
+    // ================================================================
+    // VERIFICAR SESSÃO DO ADMIN
+    // ================================================================
+    if (auth) {
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                usuarioLogado = user;
+                if (isAdminEmail(user.email)) {
+                    isAdmin = true;
+                    const nome = user.displayName || user.email.split('@')[0];
+                    usuarioAtual = nome;
+                    entrarNoChat(usuarioAtual, true);
+                } else {
+                    // Usuário comum com Google – verifica nickname salvo
+                    verificarBan(user.email, deviceId).then((banido) => {
+                        if (banido) {
+                            alert('🚫 Você está banido.');
+                            auth.signOut();
+                            return;
+                        }
+                        definirNickname(user, (nickname) => {
+                            usuarioAtual = nickname;
+                            isAdmin = false;
+                            entrarNoChat(usuarioAtual, false);
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    carregarTema();
+    atualizarContador();
+
+    console.log('🚀 App com escolha de nickname no login Google!');
+</script>
+</body>
+</html>
